@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, TextInput, Button, Text, FlatList, TouchableOpacity, Image, ScrollView, StyleSheet } from 'react-native';
 import * as ImagePicker from 'expo-image-picker'; // Used for selecting images
+import { MaterialIcons } from 'react-native-vector-icons'; // For attach logo
 
 // Helper function to pick an image
 const pickImage = async () => {
@@ -20,7 +21,7 @@ const FormsScreen = () => {
   const [options, setOptions] = useState([]);
   const [imageUri, setImageUri] = useState(null); // For question image
   const [optionImages, setOptionImages] = useState([]); // For images of options
-  const [isQuestionTypeVisible, setIsQuestionTypeVisible] = useState(false);
+  const [isQuestionTypeVisible, setIsQuestionTypeVisible] = useState(true);
 
   // Function to add a new question
   const handleAddQuestion = () => {
@@ -35,7 +36,7 @@ const FormsScreen = () => {
     setImageUri(null);
     setOptionImages([]);
     setQuestionType(null); // Reset question type after adding question
-    setIsQuestionTypeVisible(false); // Hide question type options after adding
+    setIsQuestionTypeVisible(true); // Show question type options again after adding question
   };
 
   // Function to handle selecting an image for the question
@@ -47,6 +48,7 @@ const FormsScreen = () => {
   // Function to handle adding an option
   const handleAddOption = () => {
     setOptions([...options, '']);
+    setOptionImages([...optionImages, null]); // Initialize the image array with null
   };
 
   // Function to handle adding an image for an option
@@ -82,21 +84,23 @@ const FormsScreen = () => {
       />
 
       {/* Add Question Button */}
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => setIsQuestionTypeVisible(!isQuestionTypeVisible)}
-      >
-        <Text style={styles.addButtonText}>+</Text>
-      </TouchableOpacity>
+      {!questionType && (
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => setIsQuestionTypeVisible(true)}
+        >
+          <Text style={styles.addButtonText}>+</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Show Question Type Options */}
       {isQuestionTypeVisible && (
         <View style={styles.questionTypeContainer}>
           <Text style={styles.subHeader}>Select Question Type:</Text>
           <View style={styles.buttonRow}>
-            <Button title="Text" onPress={() => setQuestionType('text')} />
-            <Button title="Radio" onPress={() => setQuestionType('radio')} />
-            <Button title="Checkbox" onPress={() => setQuestionType('checkbox')} />
+            <Button title="Text" onPress={() => { setQuestionType('text'); setIsQuestionTypeVisible(false); }} />
+            <Button title="Radio" onPress={() => { setQuestionType('radio'); setIsQuestionTypeVisible(false); }} />
+            <Button title="Checkbox" onPress={() => { setQuestionType('checkbox'); setIsQuestionTypeVisible(false); }} />
           </View>
         </View>
       )}
@@ -104,19 +108,21 @@ const FormsScreen = () => {
       {/* Question Text Input */}
       {questionType && (
         <>
-          <TextInput
-            placeholder="Enter Question Text"
-            value={questionText}
-            onChangeText={setQuestionText}
-            style={styles.textarea}
-            multiline
-            numberOfLines={4}
-          />
+          <View style={styles.textareaContainer}>
+            <TextInput
+              placeholder="Enter Question Text"
+              value={questionText}
+              onChangeText={setQuestionText}
+              style={styles.textarea}
+              multiline
+              numberOfLines={3} // Smaller height for text area
+            />
+            {/* Attach Image Button inside the Text Area */}
+            <TouchableOpacity style={styles.attachImageButton} onPress={addQuestionImage}>
+              <MaterialIcons name="attach-file" size={24} color="white" />
+            </TouchableOpacity>
+          </View>
 
-          {/* Add Image for Question */}
-          <TouchableOpacity style={styles.imageButton} onPress={addQuestionImage}>
-            <Text style={styles.buttonText}>Attach Image</Text>
-          </TouchableOpacity>
           {imageUri && <Image source={{ uri: imageUri }} style={styles.questionImage} />}
         </>
       )}
@@ -139,12 +145,17 @@ const FormsScreen = () => {
                 placeholder={`Option ${index + 1}`}
                 style={styles.input}
               />
-              <View style={styles.mediaButtonContainer}>
-                <Button title="Add Image for Option" onPress={() => addOptionImage(index)} />
-                {optionImages[index] && (
-                  <Image source={{ uri: optionImages[index] }} style={styles.optionImage} />
-                )}
-              </View>
+              {/* Attach Image for Option */}
+              <TouchableOpacity
+                style={styles.optionAttachButton}
+                onPress={() => addOptionImage(index)}
+              >
+                <MaterialIcons name="attach-file" size={24} color="white" />
+              </TouchableOpacity>
+              {/* Display the image for the option */}
+              {optionImages[index] && (
+                <Image source={{ uri: optionImages[index] }} style={styles.optionImage} />
+              )}
             </View>
           ))}
         </>
@@ -209,20 +220,41 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: '#fff',
   },
+  textareaContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 15,
+  },
   textarea: {
-    height: 100,
+    height: 50,  // Reduced height for smaller text area
     borderColor: '#ccc',
     borderWidth: 1,
-    marginBottom: 15,
     paddingLeft: 10,
     borderRadius: 5,
     backgroundColor: '#fff',
+    flex: 1,
+    fontSize: 16,
+  },
+  attachImageButton: {
+    backgroundColor: '#4CAF50',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  questionImage: {
+    width: 100,
+    height: 100,
+    marginTop: 10,
+    borderRadius: 5,
   },
   addButton: {
-    width: 60,
-    height: 60,
+    width: 50,
+    height: 50,
     backgroundColor: '#4CAF50',
-    borderRadius: 30,
+    borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 15,
@@ -245,24 +277,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 15,
   },
-  imageButton: {
-    backgroundColor: '#4CAF50',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 5,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 16,
-  },
-  questionImage: {
-    width: 100,
-    height: 100,
-    marginTop: 10,
-    borderRadius: 5,
-  },
   buttonContainer: {
     marginBottom: 15,
   },
@@ -272,13 +286,19 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 5,
   },
-  mediaButtonContainer: {
+  optionAttachButton: {
+    backgroundColor: '#4CAF50',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginTop: 10,
   },
   optionImage: {
-    width: 50,
-    height: 50,
-    marginTop: 5,
+    width: 80,
+    height: 80,
+    marginTop: 10,
     borderRadius: 5,
   },
   questionItem: {
