@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, TextInput, Button, Text, FlatList, TouchableOpacity, Image, ScrollView, StyleSheet } from 'react-native';
-import * as ImagePicker from 'expo-image-picker'; // Used for selecting images
+import * as ImagePicker from 'expo-image-picker'; // For selecting images
 import { MaterialIcons } from 'react-native-vector-icons'; // For attach logo
+import axios from 'axios';  // Import axios for HTTP requests
 
 // Helper function to pick an image
 const pickImage = async () => {
@@ -21,7 +22,6 @@ const FormsScreen = () => {
   const [options, setOptions] = useState([]);
   const [imageUri, setImageUri] = useState(null); // For question image
   const [optionImages, setOptionImages] = useState([]); // For images of options
-  const [isQuestionTypeVisible, setIsQuestionTypeVisible] = useState(true);
 
   // Function to add a new question
   const handleAddQuestion = () => {
@@ -36,7 +36,6 @@ const FormsScreen = () => {
     setImageUri(null);
     setOptionImages([]);
     setQuestionType(null); // Reset question type after adding question
-    setIsQuestionTypeVisible(true); // Show question type options again after adding question
   };
 
   // Function to handle selecting an image for the question
@@ -60,15 +59,53 @@ const FormsScreen = () => {
   };
 
   // Function to handle saving the form to the database
-  const handleSaveForm = () => {
-    // Assuming axios is set up for your API
-    axios.post('https://your-api-url.com/forms', { formName, questions })
-      .then(response => {
-        console.log('Form saved:', response.data);
-      })
-      .catch(error => {
-        console.error('Error saving form:', error);
+  const handleSaveForm = async () => {
+    try {
+      const formData = new FormData();
+      formData.append('formName', formName);
+
+      // Append questions and images
+      questions.forEach((question, index) => {
+        formData.append(`questions[${index}][question]`, question.question);
+        formData.append(`questions[${index}][type]`, question.type);
+        question.options.forEach((option, optIndex) => {
+          formData.append(`questions[${index}][options][${optIndex}]`, option);
+        });
+
+        // Append images for the question
+        if (question.questionImage) {
+          const localUri = question.questionImage;
+          const filename = localUri.split('/').pop();
+          const type = `image/${filename.split('.').pop()}`;
+          const image = { uri: localUri, name: filename, type };
+          formData.append('questionImage', image);
+        }
+
+        // Append images for the options
+        question.optionImages.forEach((optionImage, optIndex) => {
+          if (optionImage) {
+            const localUri = optionImage;
+            const filename = localUri.split('/').pop();
+            const type = `image/${filename.split('.').pop()}`;
+            const image = { uri: localUri, name: filename, type };
+            formData.append('optionImages', image);
+          }
+        });
       });
+
+      // Send POST request to the backend API
+      const response = await axios.post('http://localhost:5000/api/forms', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      console.log('Form saved:', response.data);
+      alert('Form saved successfully!');
+    } catch (error) {
+      console.error('Error saving form:', error);
+      alert('Error saving form. Please try again!');
+    }
   };
 
   return (
@@ -83,24 +120,14 @@ const FormsScreen = () => {
         style={styles.input}
       />
 
-      {/* Add Question Button */}
-      {!questionType && (
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setIsQuestionTypeVisible(true)}
-        >
-          <Text style={styles.addButtonText}>+</Text>
-        </TouchableOpacity>
-      )}
-
       {/* Show Question Type Options */}
-      {isQuestionTypeVisible && (
+      {questionType === null && (
         <View style={styles.questionTypeContainer}>
           <Text style={styles.subHeader}>Select Question Type:</Text>
           <View style={styles.buttonRow}>
-            <Button title="Text" onPress={() => { setQuestionType('text'); setIsQuestionTypeVisible(false); }} />
-            <Button title="Radio" onPress={() => { setQuestionType('radio'); setIsQuestionTypeVisible(false); }} />
-            <Button title="Checkbox" onPress={() => { setQuestionType('checkbox'); setIsQuestionTypeVisible(false); }} />
+            <Button title="Text" onPress={() => setQuestionType('text')} />
+            <Button title="Radio" onPress={() => setQuestionType('radio')} />
+            <Button title="Checkbox" onPress={() => setQuestionType('checkbox')} />
           </View>
         </View>
       )}
@@ -135,23 +162,27 @@ const FormsScreen = () => {
           </View>
           {options.map((option, index) => (
             <View key={index} style={styles.optionContainer}>
-              <TextInput
-                value={option}
-                onChangeText={(text) => {
-                  const updatedOptions = [...options];
-                  updatedOptions[index] = text;
-                  setOptions(updatedOptions);
-                }}
-                placeholder={`Option ${index + 1}`}
-                style={styles.input}
-              />
-              {/* Attach Image for Option */}
-              <TouchableOpacity
-                style={styles.optionAttachButton}
-                onPress={() => addOptionImage(index)}
-              >
-                <MaterialIcons name="attach-file" size={24} color="white" />
-              </TouchableOpacity>
+              <View style={styles.optionInputContainer}>
+                <Text style={styles.optionLabel}>Option {index + 1}:</Text>
+                <TextInput
+                  value={option}
+                  onChangeText={(text) => {
+                    const updatedOptions = [...options];
+                    updatedOptions[index] = text;
+                    setOptions(updatedOptions);
+                  }}
+                  placeholder={`Enter Option ${index + 1}`}
+                  style={styles.input}
+                />
+                {/* Attach Image for Option inside the Text Area */}
+                <TouchableOpacity
+                  style={styles.optionAttachButton}
+                  onPress={() => addOptionImage(index)}
+                >
+                  <MaterialIcons name="attach-file" size={24} color="white" />
+                </TouchableOpacity>
+              </View>
+
               {/* Display the image for the option */}
               {optionImages[index] && (
                 <Image source={{ uri: optionImages[index] }} style={styles.optionImage} />
@@ -161,23 +192,26 @@ const FormsScreen = () => {
         </>
       )}
 
-      {/* Add the Question Button */}
+      {/* Done Button to Add Question */}
       {questionType && (
         <View style={styles.buttonContainer}>
-          <Button title="Add Question" onPress={handleAddQuestion} />
+          <Button title="Done" onPress={handleAddQuestion} />
         </View>
       )}
 
       {/* Display Added Questions */}
       <FlatList
         data={questions}
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
           <View style={styles.questionItem}>
-            <Text>{item.question} ({item.type})</Text>
+            <Text>{`Question ${index + 1}: ${item.question} (${item.type})`}</Text>
             {item.type === 'radio' || item.type === 'checkbox' ? (
               item.options.map((option, idx) => (
                 <View key={idx} style={styles.optionDisplay}>
-                  <Text>{option}</Text>
+                  <Text>{`Option ${idx + 1}: ${option}`}</Text>
+                  <Text style={styles.optionSign}>
+                    {item.type === 'radio' ? '⚪' : '☑️'} {/* Display radio or checkbox sign */}
+                  </Text>
                   {item.optionImages[idx] && (
                     <Image source={{ uri: item.optionImages[idx] }} style={styles.optionImageDisplay} />
                   )}
@@ -250,20 +284,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     borderRadius: 5,
   },
-  addButton: {
-    width: 50,
-    height: 50,
-    backgroundColor: '#4CAF50',
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 15,
-    alignSelf: 'center',
-  },
-  addButtonText: {
-    fontSize: 36,
-    color: 'white',
-  },
   questionTypeContainer: {
     marginBottom: 15,
   },
@@ -286,6 +306,14 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 5,
   },
+  optionInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  optionLabel: {
+    fontSize: 16,
+    marginRight: 10,
+  },
   optionAttachButton: {
     backgroundColor: '#4CAF50',
     width: 40,
@@ -293,7 +321,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 10,
+    marginLeft: 10,
   },
   optionImage: {
     width: 80,
@@ -313,6 +341,11 @@ const styles = StyleSheet.create({
   },
   optionDisplay: {
     marginBottom: 10,
+  },
+  optionSign: {
+    fontSize: 18,
+    marginTop: 5,
+    color: '#4CAF50',
   },
   optionImageDisplay: {
     width: 50,
