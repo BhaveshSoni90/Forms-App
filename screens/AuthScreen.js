@@ -1,6 +1,6 @@
 // screens/AuthScreen.js
 import React, { useState } from 'react';
-import { View, TextInput, Button, Text, Alert } from 'react-native';
+import { View, TextInput, Button, Text, Alert, TouchableOpacity, StyleSheet } from 'react-native';
 import axios from 'axios';
 import { useAuth } from '../AuthContext'; // Import the Auth context
 
@@ -9,13 +9,13 @@ const AuthScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth(); // Get login method from context
+  const { user, login, logout } = useAuth(); // Get user data, login, and logout from context
 
   const handleAuth = async () => {
     setLoading(true);
     const url = isLogin
-      ? 'http://localhost:5000/api/login'  // Replace with your API endpoint
-      : 'http://localhost:5000/api/signup'; // Replace with your API endpoint
+      ? 'https://forms-backend-gac5.onrender.com/api/login'
+      : 'https://forms-backend-gac5.onrender.com/api/signup';
 
     try {
       const response = await axios.post(url, { email, password });
@@ -50,31 +50,106 @@ const AuthScreen = ({ navigation }) => {
     }
   };
 
+  const handleLogout = () => {
+    logout(); // Call the logout method to clear the user's session
+    Alert.alert('Logged out', 'You have been logged out successfully.');
+  };
+
+  if (user) {
+    // If user is logged in, show user details and logout button
+    return (
+      <View style={styles.container}>
+        <Text style={styles.welcomeText}>Welcome, {user.name}!</Text> {/* Show user name */}
+        <TouchableOpacity style={styles.button} onPress={handleLogout}>
+          <Text style={styles.buttonText}>Logout</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
-    <View style={{ padding: 20 }}>
+    <View style={styles.container}>
       <TextInput
         placeholder="Email"
         value={email}
         onChangeText={setEmail}
-        style={{ marginBottom: 10, padding: 10, borderWidth: 1 }}
+        style={styles.input}
       />
       <TextInput
         placeholder="Password"
         value={password}
         secureTextEntry
         onChangeText={setPassword}
-        style={{ marginBottom: 10, padding: 10, borderWidth: 1 }}
+        style={styles.input}
       />
-      <Button title={isLogin ? 'Login' : 'Signup'} onPress={handleAuth} disabled={loading} />
-      {loading && <Text>Loading...</Text>}
-      <Text
-        onPress={() => setIsLogin(!isLogin)}
-        style={{ marginTop: 10, color: 'blue', textAlign: 'center' }}
-      >
-        {isLogin ? 'Switch to Signup' : 'Switch to Login'}
-      </Text>
+      <TouchableOpacity style={styles.button} onPress={handleAuth} disabled={loading}>
+        <Text style={styles.buttonText}>{isLogin ? 'Login' : 'Signup'}</Text>
+      </TouchableOpacity>
+      {loading && <Text style={styles.loadingText}>Loading...</Text>}
+      <TouchableOpacity onPress={() => setIsLogin(!isLogin)} style={styles.switchButton}>
+        <Text style={styles.switchButtonText}>
+          {isLogin ? 'Switch to Signup' : 'Switch to Login'}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#f5f5f5',
+  },
+  welcomeText: {
+    fontSize: 24,
+    fontWeight: '600',
+    marginBottom: 20,
+    color: '#333',
+  },
+  input: {
+    width: '100%',
+    padding: 15,
+    marginVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    backgroundColor: '#fff',
+    fontSize: 16,
+  },
+  button: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 12,
+    paddingHorizontal: 50,
+    borderRadius: 8,
+    marginVertical: 10,
+    width: '100%',
+    alignItems: 'center',
+    elevation: 2, // Shadow effect for Android
+    shadowColor: '#000', // Shadow effect for iOS
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#fff',
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#555',
+    fontSize: 14,
+  },
+  switchButton: {
+    marginTop: 20,
+  },
+  switchButtonText: {
+    color: '#007BFF',
+    fontSize: 16,
+  },
+});
 
 export default AuthScreen;

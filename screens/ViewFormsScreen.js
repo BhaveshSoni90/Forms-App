@@ -9,7 +9,7 @@ const ViewFormsScreen = ({ navigation }) => {
 
   // Fetch the saved forms from the backend API
   useEffect(() => {
-    axios.get('http://localhost:5000/api/forms')  // Update this with your actual API URL
+    axios.get('https://forms-backend-gac5.onrender.com/api/forms')  // Update this with your actual API URL
       .then(response => {
         setForms(response.data);  // Store the forms data in the state
         setLoading(false);  // Set loading to false once data is fetched

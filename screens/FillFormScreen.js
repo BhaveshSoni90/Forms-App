@@ -8,7 +8,7 @@ const FillFormScreen = ({ route }) => {
   const [responses, setResponses] = useState({});
 
   useEffect(() => {
-    axios.get(`https://your-api-url.com/forms/${formId}`)
+    axios.get(`https://forms-backend-gac5.onrender.com/api/forms/${formId}`)
       .then(response => {
         setForm(response.data);
       })
@@ -18,7 +18,7 @@ const FillFormScreen = ({ route }) => {
   }, [formId]);
 
   const handleSubmit = () => {
-    axios.post('https://your-api-url.com/responses', { formId, responses })
+    axios.post('https://forms-backend-gac5.onrender.com/api/responses', { formId, responses })
       .then(response => {
         console.log('Form response saved:', response.data);
       })
